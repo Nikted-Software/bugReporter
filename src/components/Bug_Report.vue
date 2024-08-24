@@ -94,6 +94,7 @@
           <th>شرح باگ</th>
           <th>فایل</th>
           <th>تاریخ ثبت</th>
+          <th>حذف</th>
         </tr>
         </thead>
         <tbody>
@@ -109,6 +110,12 @@
             <a v-if="report.file_url" :href="report.file_url" target="_blank">مشاهده فایل</a>
           </td>
           <td>{{ report.created_at }}</td>
+          <td>
+            <button @click="deleteReport(report.id)" class="btn btn-danger btn-sm">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+
         </tr>
         </tbody>
       </table>
@@ -258,6 +265,22 @@ export default {
       } catch (err) {
         console.error('Unexpected error:', err);
         return null;
+      }
+    },
+    async deleteReport(reportId) {
+      try {
+        const { error } = await supabase
+            .from('bug_report')
+            .delete()
+            .eq('id', reportId);
+
+        if (error) throw error;
+
+        this.bugReports = this.bugReports.filter(report => report.id !== reportId);
+        alert('گزارش با موفقیت حذف شد.');
+      } catch (error) {
+        this.error = 'خطا در حذف گزارش';
+        console.error('Error deleting report:', error);
       }
     },
     async submitForm() {
