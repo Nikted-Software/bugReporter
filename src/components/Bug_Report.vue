@@ -234,7 +234,7 @@ export default {
         const uniqueFileName = `${Date.now()}_${this.file.name}`;
         const filePath = `public/${uniqueFileName}`;
 
-        const {data, error} = await supabase
+        const { error} = await supabase
             .storage
             .from('bug_files')
             .upload(filePath, this.file);
