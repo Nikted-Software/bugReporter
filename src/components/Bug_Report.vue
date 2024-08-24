@@ -1,16 +1,13 @@
 <template>
   <div class="container mt-5">
-
     <div class="container border rounded-5 p-5">
       <h3 class="mb-4">فرم گزارش باگ</h3>
       <form @submit.prevent="submitForm" class="mb-4">
         <div class="row">
-
           <div class="col-md-4 mb-3">
             <label for="reporterName" class="form-label">نام و نام خانوادگی گزارش‌دهنده</label>
             <input v-model="formData.reporterName" type="text" class="form-control" id="reporterName" required>
           </div>
-
           <div class="col-md-4 mb-3">
             <label for="projectName" class="form-label">نام پروژه</label>
             <select v-model="formData.projectName" class="form-select" id="projectName" required>
@@ -18,7 +15,6 @@
               <option v-for="project in projects" :key="project.project_name" :value="project.project_name">{{ project.project_name }}</option>
             </select>
           </div>
-
           <div class="col-md-4 mb-3">
             <label for="severity" class="form-label">شدت باگ</label>
             <select v-model="formData.severity" class="form-select" id="severity" required>
@@ -29,7 +25,6 @@
             </select>
           </div>
         </div>
-
         <div class="row">
           <div class="col-md-4 mb-3">
             <label for="appVersion" class="form-label">نسخه اپلیکیشن</label>
@@ -38,31 +33,39 @@
               <option v-for="version in appVersions" :key="version.version_name" :value="version.version_name">{{ version.version_name }}</option>
             </select>
           </div>
-
           <div class="col-md-8 mb-3">
             <label for="steps" class="form-label">مراحل ایجاد باگ</label>
             <input v-model="formData.steps" type="text" class="form-control" id="steps" required>
           </div>
         </div>
-
         <div class="mb-3">
           <label for="errorMessage" class="form-label">پیام باگ</label>
           <input v-model="formData.errorMessage" type="text" class="form-control" id="errorMessage" required>
         </div>
-
         <div class="mb-3">
           <label for="bugDescription" class="form-label">شرح باگ</label>
           <textarea v-model="formData.bugDescription" class="form-control" id="bugDescription" rows="3" required></textarea>
         </div>
-
-<!--        &lt;!&ndash; آپلود فایل &ndash;&gt;-->
-<!--        <div class="mb-3">-->
-<!--          <label for="bugFile" class="form-label">آپلود تصویر یا فایل</label>-->
-<!--          <input @change="handleFileUpload" type="file" class="form-control" id="bugFile" accept="image/*,.pdf,.docx">-->
-<!--        </div>-->
-
+        <div class="mb-3">
+          <label for="bugFile" class="form-label">آپلود تصویر یا فایل</label>
+          <input
+              ref="fileInput"
+              @change="handleFileUpload"
+              type="file"
+              class="form-control"
+              id="bugFile"
+              accept="image/*,.pdf,.docx"
+          />
+        </div>
         <button type="submit" class="btn btn-primary">ارسال</button>
       </form>
+
+      <div v-if="isSubmitting" class="text-center">
+        <p>در حال ثبت باگ...</p>
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">در حال ثبت باگ...</span>
+        </div>
+      </div>
     </div>
 
     <div class="container mt-3 border rounded-5 p-5 table-responsive">
@@ -89,22 +92,22 @@
           <th>مراحل ایجاد باگ</th>
           <th>پیام ارور</th>
           <th>شرح باگ</th>
-<!--          <th>فایل</th>-->
-          <th>تاریخ ثبت </th>
+          <th>فایل</th>
+          <th>تاریخ ثبت</th>
         </tr>
         </thead>
         <tbody>
         <tr v-for="report in bugReports" :key="report.id">
           <td>{{ report.full_name }}</td>
           <td>{{ report.project_name }}</td>
-          <td>{{ report.status }}</td>
+          <td>{{ severityLabel(report.status )}}</td>
           <td>{{ report.version_app }}</td>
           <td>{{ report.steps }}</td>
           <td>{{ report.message_error }}</td>
           <td>{{ report.description_bug }}</td>
-<!--          <td>-->
-<!--            <a v-if="report.fileUrl" :href="report.fileUrl" target="_blank">مشاهده فایل</a>-->
-<!--          </td>-->
+          <td>
+            <a v-if="report.file_url" :href="report.file_url" target="_blank">مشاهده فایل</a>
+          </td>
           <td>{{ report.created_at }}</td>
         </tr>
         </tbody>
@@ -146,11 +149,12 @@
 </style>
 
 <script>
-import { supabase } from '../supabase';
+import {supabase} from '../supabase';
 
 export default {
   data() {
     return {
+      isSubmitting: false,
       formData: {
         reporterName: '',
         projectName: '',
@@ -209,8 +213,7 @@ export default {
       try {
         const {data, error} = await supabase.from('bug_report').select('*');
         if (error) throw error;
-        this.bugReports = data;
-        this.loading = false;
+        this.bugReports = data.reverse();
       } catch (error) {
         this.error = 'خطا در دریافت گزارشات باگ';
         console.error('Error fetching data:', error);
@@ -222,30 +225,47 @@ export default {
       this.file = event.target.files[0];
     },
     async uploadFile() {
-      if (this.file) {
+      if (!this.file) {
+        console.error('No file selected.');
+        return null;
+      }
+
+      try {
+        const uniqueFileName = `${Date.now()}_${this.file.name}`;
+        const filePath = `public/${uniqueFileName}`;
+
         const {data, error} = await supabase
             .storage
             .from('bug_files')
-            .upload(`public/${Date.now()}_${this.file.name}`, this.file);
+            .upload(filePath, this.file);
 
         if (error) {
-          console.error('خطا در آپلود فایل:', error);
+          console.error('Error uploading file:', error);
           return null;
-        } else {
-          return data.Key;
         }
+
+        const {data: publicUrlData} = supabase
+            .storage
+            .from('bug_files')
+            .getPublicUrl(filePath);
+
+        if (!publicUrlData || !publicUrlData.publicUrl) {
+          console.error('Error getting public URL');
+          return null;
+        }
+
+        return publicUrlData.publicUrl;
+      } catch (err) {
+        console.error('Unexpected error:', err);
+        return null;
       }
-      return null;
     },
     async submitForm() {
-      this.loading = true;
+      this.isSubmitting=true;
       this.error = null;
       try {
-        // const fileUrl = await this.uploadFile();
-        // console.log(fileUrl)
-        // if (fileUrl) {
-        //   this.formData.fileUrl = fileUrl;
-        // }
+        const fileUrl = await this.uploadFile();
+        this.formData.fileUrl = fileUrl ? fileUrl : null;
 
         const {error} = await supabase.from('bug_report').insert([
           {
@@ -256,13 +276,12 @@ export default {
             steps: this.formData.steps,
             message_error: this.formData.errorMessage,
             description_bug: this.formData.bugDescription,
-            // fileUrl: this.formData.fileUrl
+            file_url: this.formData.fileUrl
           }
         ]);
 
         if (error) throw error;
 
-        // Reset form
         this.formData = {
           reporterName: '',
           projectName: '',
@@ -275,18 +294,28 @@ export default {
         };
         this.file = null;
 
-        // Refresh bug reports
-        await this.fetchBugReports();
-        this.loading = false;
+        const fileInput = this.$refs.fileInput;
+        if (fileInput) {
+          fileInput.value = '';
+        }
 
+        await this.fetchBugReports();
         alert('گزارش باگ با موفقیت ارسال شد!');
       } catch (error) {
         this.error = 'خطا در ارسال گزارش باگ';
         console.error('Error submitting form:', error);
       } finally {
-        this.loading = false;
+        this.isSubmitting = false;
       }
-    }
+    },
+    severityLabel(severity) {
+      const severityMap = {
+        Normal: 'معمولی',
+        Severe: 'شدید',
+        Critical: 'بحرانی'
+      };
+      return severityMap[severity] || 'نامشخص';
+    },
   }
-}
+};
 </script>
