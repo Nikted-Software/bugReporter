@@ -35,16 +35,16 @@
           </div>
           <div class="col-md-8 mb-3">
             <label for="steps" class="form-label">مراحل ایجاد باگ</label>
-            <input v-model="formData.steps" type="text" class="form-control" id="steps" required>
+            <input v-model="formData.steps" type="text" class="form-control" id="steps" required placeholder="لطفا مراحلی که طی کردید که به باگ برخورد کردین رو شرح دهید!">
           </div>
         </div>
         <div class="mb-3">
           <label for="errorMessage" class="form-label">پیام باگ</label>
-          <input v-model="formData.errorMessage" type="text" class="form-control" id="errorMessage" required>
+          <input v-model="formData.errorMessage" type="text" class="form-control" id="errorMessage" required placeholder="لطفا متن error رو به صورت انگلیسی وارد کنید ">
         </div>
         <div class="mb-3">
           <label for="bugDescription" class="form-label">شرح باگ</label>
-          <textarea v-model="formData.bugDescription" class="form-control" id="bugDescription" rows="3" required></textarea>
+          <textarea v-model="formData.bugDescription" class="form-control" id="bugDescription" rows="3" required placeholder="لطفا باگ رو به صورت کامل شرح دهید "></textarea>
         </div>
         <div class="mb-3">
           <label for="bugFile" class="form-label">آپلود تصویر یا فایل</label>
